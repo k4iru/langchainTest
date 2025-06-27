@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "nodenext",                       // 🧠 must be nodenext for ts-node-esm
+    "moduleResolution": "nodenext",             // 🧠 must be nodenext
+    "esModuleInterop": true,
+    "strict": true,
+  },
+  "include": ["**/*.ts"]
+}
