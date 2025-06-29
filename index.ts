@@ -1,58 +1,75 @@
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 import {
+	START,
 	END,
+	StateGraph,
 	MemorySaver,
 	MessagesAnnotation,
-	START,
-	StateGraph,
+	Annotation,
 } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
+
+// needed to use .env files
 import dotenv from "dotenv";
 import { v4 as uuidv4 } from "uuid";
 
-const config = { configurable: { thread_id: uuidv4() } };
-
+// loads .env file
 dotenv.config();
 
 const API_KEY = process.env.OPENAI_API_KEY || "";
 
+// adapter
 const llm = new ChatOpenAI({
 	model: "o4-mini",
 	maxRetries: 2,
 	apiKey: API_KEY,
 });
 
-const callModel = async (state: typeof MessagesAnnotation.State) => {
-	const response = await llm.invoke(state.messages);
-	return { messages: response };
+// prompt template for formatting queries
+const promptTemplate2 = ChatPromptTemplate.fromMessages([
+	[
+		"system",
+		"You are a helpful assistant. Answer all questions to the best of your ability in {language}.",
+	],
+	["placeholder", "{messages}"],
+]);
+
+// Define the State. since we are adding language we use Annoation root and add "language" which is of Annotation<string>
+const GraphAnnotation = Annotation.Root({
+	...MessagesAnnotation.spec,
+	language: Annotation<string>(),
+});
+
+// Define the function that calls the model
+const callModel3 = async (state: typeof GraphAnnotation.State) => {
+	const prompt = await promptTemplate2.invoke(state);
+	const response = await llm.invoke(prompt);
+	return { messages: [response] };
 };
 
-// Define a new graph
-const workflow = new StateGraph(MessagesAnnotation)
-	// Define the node and edge
-	.addNode("model", callModel)
+// langgraph for work flow
+const workflow3 = new StateGraph(GraphAnnotation)
+	.addNode("model", callModel3)
 	.addEdge(START, "model")
 	.addEdge("model", END);
 
-// Add memory
-const memory = new MemorySaver();
-const app = workflow.compile({ checkpointer: memory });
+// compile work flow with memory.
+const app3 = workflow3.compile({ checkpointer: new MemorySaver() });
 
-const input = [
-	{
-		role: "user",
-		content: "Hi! I'm Bob.",
-	},
-];
-const output = await app.invoke({ messages: input }, config);
-// The output contains all messages in the state.
-// This will log the last message in the conversation.
-console.log(output.messages);
+// add a thread id for context so app knows which chat it is using
+const config4 = { configurable: { thread_id: uuidv4() } };
 
-const input2 = [
-	{
-		role: "user",
-		content: "What's my name?",
-	},
-];
-const output2 = await app.invoke({ messages: input2 }, config);
-console.log(output2.messages[output2.messages.length - 1]);
+// user input + language
+const input6 = {
+	messages: [
+		{
+			role: "user",
+			content: "Hi im bob",
+		},
+	],
+	language: "Spanish",
+};
+
+// invoke. return last message
+const output7 = await app3.invoke(input6, config4);
+console.log(output7.messages[output7.messages.length - 1]);
