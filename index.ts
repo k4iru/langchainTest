@@ -9,6 +9,8 @@ import {
 	Annotation,
 } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
+import { ChatGroq } from "@langchain/groq";
+import { ChatAnthropic } from "@langchain/anthropic";
 
 import {
 	SystemMessage,
